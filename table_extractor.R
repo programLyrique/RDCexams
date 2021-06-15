@@ -135,7 +135,8 @@ extract_results <- function(filename) {
             # Add some tolerance
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F)\\s+((?:\\d)+)", convert = TRUE)
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F)\\s+((?:\\d)+)", convert = TRUE) %>%
+            select(-y)
 
         # Now let's join everything together!!
         school_info <- select(school_info, -end_block_y)
