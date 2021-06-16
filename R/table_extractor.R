@@ -13,7 +13,7 @@ stabilize_rows <- function(df, tolerance = 2, n = 3) {
 
 
 #' @export
-#' @import dplyr tidyr stringr lubridate
+#' @import dplyr tidyr stringr lubridate readr
 extract_results <- function(filename) {
     # A list of tibbles, one per page
     pdf_pages <- pdftools::pdf_data(filename)
