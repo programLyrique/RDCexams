@@ -1,8 +1,3 @@
-library(tidyverse)
-library(pdftools)
-library(lubridate)
-
-
 # A very simple fixed point algorithm
 # the goal is to adjust the y coordinate of items that are close together
 # to coalesce them into their proper row
@@ -16,9 +11,12 @@ stabilize_rows <- function(df, tolerance = 2, n = 3) {
     }
 }
 
+
+#' @export
+#' @import dplyr tidyr stringr lubridate
 extract_results <- function(filename) {
     # A list of tibbles, one per page
-    pdf_pages <- pdf_data(filename)
+    pdf_pages <- pdftools::pdf_data(filename)
 
 
     # For documentation purposes
