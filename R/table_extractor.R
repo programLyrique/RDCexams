@@ -14,11 +14,7 @@ stabilize_rows <- function(df, tolerance = 2, n = 3) {
 
 #' @export
 #' @import dplyr tidyr stringr lubridate readr
-extract_results <- function(filename) {
-    # A list of tibbles, one per page
-    pdf_pages <- pdftools::pdf_data(filename)
-
-
+extract_results <- function(pdf_pages) {
     # For documentation purposes
     # results <- tibble(
     #     option = character(0),
@@ -26,6 +22,7 @@ extract_results <- function(filename) {
     #     province = character(0),
     #     code_province = integer(0),
     #     year = Date(0),
+    #     page = integer(0),
     #     school = character(0),
     #     school_code = character(0), # we can also divide it into its 4 components
     #     nb_participants = integer(0),
@@ -144,6 +141,28 @@ extract_results <- function(filename) {
     bind_rows(page_infos) %>%
         mutate(option = option, code_option = code_option,
                province = province, code_province = code_province,
-               year = year, .before = school_index)
+               year = year,
+               page = page_num,
+               before = school_index)
 }
 
+
+#'export
+extract_from_file <- function(filename) {
+    # A list of tibbles, one per page
+    pdf_pages <- pdftools::pdf_data(filename)
+    extract_results(pdf_pages)
+}
+
+#'export
+extract_from_folder <- function(foldername) {
+    files <- list.files(foldername, pattern = ".*\\.pdf", recursive = TRUE, full.names = TRUE)
+
+    # we might want to parallelize that
+    for(file in files) {
+        res <- extract_from_file(file)
+        if(nrow(res) > 0) {
+            readr::write_csv(res, str_replace(file, "\\.pdf$", ".csv"))
+        }
+    }
+}

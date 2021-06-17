@@ -1,6 +1,7 @@
 # Table extractor for the exam results in RDC
 
-This defines a function `table_extract` which takes a pdf as input.
+This defines a function `extract_from_file` which takes a pdf (as filename) as input.
+
 The function outputs a tibble with the following columns:
 
 ````R
@@ -25,3 +26,6 @@ tibble(
 ```
 
 Then, you can save the tibble as a CSV file.
+
+
+You can also use `extract_from_folder`to process all the pdfs in a folder (and its sub-folders).
