@@ -36,6 +36,13 @@ extract_results <- function(pdf_pages) {
     #     mark = integer(0)
     # )
 
+    student_cols <- cols(
+        ranking = col_integer(),
+        name = col_character(),
+        gender = col_factor(levels = c("M", "F")),
+        mark = col_integer()
+    )
+
     page_infos <- list()
 
     option <- character(0)
@@ -134,7 +141,8 @@ extract_results <- function(pdf_pages) {
             # Add some tolerance
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F)\\s+((?:\\d)+)", convert = TRUE) %>%
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F)\\s+((?:\\d)+)") %>%
+            type_convert(student_cols) %>%
             select(-y)
 
         # Now let's join everything together!!
