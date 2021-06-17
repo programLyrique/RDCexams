@@ -89,8 +89,12 @@ extract_results <- function(pdf_pages) {
 
         # A school block ends just before a new block start, or
         # at the end of the document
+        # It starts with something that is not a number, not "Code",
+        # "Participant" or "Réussite"
         start_school_block <- schools %>%
-            filter(text %in% c("INSTITUT", "COLLEGE", "AUTODIDACTES", "SEMINAIRE")) %>%
+            group_by(y) %>%
+            summarize(line = paste0(text, collapse = " ")) %>%
+            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)")) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
@@ -143,7 +147,7 @@ extract_results <- function(pdf_pages) {
                province = province, code_province = code_province,
                year = year,
                page = page_num,
-               before = school_index)
+               .before = school_index)
 }
 
 
