@@ -146,7 +146,8 @@ extract_results <- function(pdf_pages) {
             select(-y)
 
         # Now let's join everything together!!
-        school_info <- select(school_info, -end_block_y)
+        school_info <- select(school_info, -end_block_y) %>%
+            mutate(page = page_num, .before = school_index)
         page_infos[[page_num]] <- school_info %>% left_join(student_info)
     }
 
@@ -154,8 +155,7 @@ extract_results <- function(pdf_pages) {
         mutate(option = option, code_option = code_option,
                province = province, code_province = code_province,
                year = year,
-               page = page_num,
-               .before = school_index)
+               .before = page)
 }
 
 
