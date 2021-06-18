@@ -159,14 +159,14 @@ extract_results <- function(pdf_pages) {
 }
 
 
-#'export
+#' @export
 extract_from_file <- function(filename) {
     # A list of tibbles, one per page
     pdf_pages <- pdftools::pdf_data(filename)
     extract_results(pdf_pages)
 }
 
-#'export
+#' @export
 extract_from_folder <- function(foldername) {
     files <- list.files(foldername, pattern = ".*\\.pdf", recursive = TRUE, full.names = TRUE)
 
