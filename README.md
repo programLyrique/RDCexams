@@ -17,7 +17,6 @@ tibble(
     nb_females = integer(0),
     nb_success = integer(0),
     nb_success_females = integer(0),
-    # is it really the ranking or just an useless index we do not need?
     ranking = integer(0),
     name = character(0),
     gender = factor(levels = c("M", "F")),
@@ -25,7 +24,7 @@ tibble(
 )
 ```
 
-Then, you can save the tibble as a CSV file.
+Then, you can save the tibble as a CSV file for instance.
 
 
-You can also use `extract_from_folder`to process all the pdfs in a folder (and its sub-folders).
+You can also use `extract_from_folder` to process all the pdfs in a folder (and its sub-folders).
