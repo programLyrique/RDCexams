@@ -4,7 +4,7 @@ This defines a function `extract_from_file` which takes a pdf (as filename) as i
 
 The function outputs a tibble with the following columns:
 
-````R
+```R
 tibble(
     option = character(0),
     code_option = integer(0),
