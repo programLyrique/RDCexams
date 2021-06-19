@@ -45,12 +45,6 @@ extract_results <- function(pdf_pages) {
 
     page_infos <- list()
 
-    option <- character(0)
-    code_option <- integer(0)
-    province <- character(0)
-    code_province <- integer(0)
-    year <- Date(0)
-
     for(page_num in seq_along(pdf_pages)) {
         # sort rows by increasing y (they are not!)
         page <- arrange(pdf_pages[[page_num]], y)
@@ -61,17 +55,18 @@ extract_results <- function(pdf_pages) {
         y_coord_first <- page[1,]$y
         y_coord_last <-page[nrow(page),]$y
 
-        if(page_num == 1) {
-            first_line <- page %>% filter(y == y_coord_first) %>% pull(text)
-            last_line <- page %>% filter(y == y_coord_last) %>% pull(text)
-            # Might be a bit fragile if the option or the province
-            # are composed of several words.
-            option <- first_line[[3]]
-            code_option <- first_line[[7]]
-            province <- first_line[[10]]
-            code_province <- first_line[[15]]
-            year <- last_line[[8]]
-        }
+        option_line <- page %>% filter(y == y_coord_first, x < 350) %>% pull(text) %>% paste0(collapse = " ")
+        province_line <- page %>% filter(y == y_coord_first, x >= 350) %>% pull(text) %>% paste0(collapse = " ")
+
+        last_line <- page %>% filter(y == y_coord_last) %>% pull(text)
+
+        res_option <- str_match(option_line, "Option\\s+:\\s+(.*)\\s+-\\s+Code\\s+:\\s+(\\d+)")
+        res_province <- str_match(province_line, "Province\\s+:\\s+(.*)\\s+-\\s+Code\\s+:\\s+(\\d+)")
+        option <- res_option[[2]]
+        code_option <- as.integer(res_option[[3]])
+        province <- res_province[[2]]
+        code_province <- as.integer(res_province[[3]])
+        year <- as.integer(last_line[[8]])
 
         page <- page %>% filter(!y %in% c(y_coord_first, y_coord_last))
 
@@ -126,13 +121,13 @@ extract_results <- function(pdf_pages) {
                 # Slightly trickier because they write "Zéro" instead of "0"!
                 nb_females = replace_na(str_match(cur_data()[3, "text"], "Dont : ((?:\\d)+|Zéro) F")[2], "0"),
                 nb_success = replace_na(str_match(cur_data()[4, "text"], "Réussites?\\s+:\\s*((?:\\d)+|Zéro)")[2], "0"),
-                nb_success_females = replace_na(str_match(cur_data()[3, "text"], "Dont : ((?:\\d)+|Zéro) F")[2], "0"),
+                nb_success_females = replace_na(str_match(cur_data()[4, "text"], "Dont : ((?:\\d)+|Zéro) F")[2], "0"),
                 end_block_y = max(y)
                 ) %>%
             # replace by a map on the columns?
             mutate(nb_females = if_else(nb_females == "Zéro", 0L, as.integer(nb_females)),
                    nb_success = if_else(nb_success == "Zéro", 0L, as.integer(nb_success)),
-                   nb_success_females = if_else(nb_success == "Zéro", 0L, as.integer(nb_success)))
+                   nb_success_females = if_else(nb_success_females == "Zéro", 0L, as.integer(nb_success_females)))
 
         end_block <- school_info %>% select(school_index, end_block_y)
         # Extract student information
@@ -147,16 +142,14 @@ extract_results <- function(pdf_pages) {
 
         # Now let's join everything together!!
         school_info <- select(school_info, -end_block_y) %>%
-            mutate(page = page_num, .before = school_index)
+            mutate(option = option, code_option = code_option,
+                   province = province, code_province = code_province,
+                   year = year,
+                    page = page_num, .before = school_index)
         page_infos[[page_num]] <- school_info %>% left_join(student_info)
     }
 
-    bind_rows(page_infos) %>%
-        mutate(option = option, code_option = code_option,
-               province = province, code_province = code_province,
-               year = year,
-               .before = page)
-}
+    bind_rows(page_infos) }
 
 
 #' @export
