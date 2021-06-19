@@ -28,3 +28,9 @@ Then, you can save the tibble as a CSV file for instance.
 
 
 You can also use `extract_from_folder` to process all the pdfs in a folder (and its sub-folders).
+
+## Installing
+
+```R
+devtools::install_github("programLyrique/RDCexams")
+```
