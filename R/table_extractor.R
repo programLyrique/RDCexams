@@ -100,16 +100,20 @@ extract_results <- function(pdf_pages) {
             select(y) %>%
             mutate(school_index = row_number())
 
-        schools <- schools %>% left_join(start_school_block, by="y")
-        schools <- tidyr::fill(schools, school_index)
 
-        grouped_schools <- schools %>% group_by(school_index, y)
+        schools <- schools %>% left_join(start_school_block, by="y")
+        schools <- tidyr::fill(schools, school_index) %>%
+            mutate(school_index = replace_na(school_index, 0))
+
+
 
         # Extract school information
         # the 1st 4 lines of a block
         # Some blocks have Participants and Réussites misaligned by one pixel...
         # We need to correct that first
-        school_info <- grouped_schools %>%
+        school_info <- schools %>%
+            filter(school_index != 0) %>%
+            group_by(school_index, y) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
             #stabilize_rows() %>%
             slice_head(n = 4) %>%
@@ -129,10 +133,29 @@ extract_results <- function(pdf_pages) {
                    nb_success = if_else(nb_success == "Zéro", 0L, as.integer(nb_success)),
                    nb_success_females = if_else(nb_success_females == "Zéro", 0L, as.integer(nb_success_females)))
 
+
+        # Is there any continuation of a school on the previous page?
+        # For that, we just need to detect if there are any rows before the first
+        # start_school_block (remember we already remove the line with the option and province)
+        # that is to say, does the first row has a first row with a NA school_index
+        if(schools[1,"school_index"] == 0) {
+            if(page_num == 1) {
+                warning("Detected students without a school on the first page!")
+            } else {
+                prev_school_info <- tail(page_infos[[page_num - 1]], n =1) %>%
+                    select(contains("school"), starts_with("nb")) %>%
+                    mutate(school_index = 0, end_block_y = schools[1,]$y - 15)
+                school_info <- bind_rows(prev_school_info, school_info)
+            }
+        }
+
         end_block <- school_info %>% select(school_index, end_block_y)
+
         # Extract student information
         # The remaining lines
-        student_info <- grouped_schools %>% left_join(end_block) %>%
+        student_info <- schools %>%
+            group_by(school_index, y) %>%
+            left_join(end_block) %>%
             # Add some tolerance
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
