@@ -55,8 +55,14 @@ extract_results <- function(pdf_pages) {
         y_coord_first <- page[1,]$y
         y_coord_last <-page[nrow(page),]$y
 
-        option_line <- page %>% filter(y == y_coord_first, x < 350) %>% pull(text) %>% paste0(collapse = " ")
-        province_line <- page %>% filter(y == y_coord_first, x >= 350) %>% pull(text) %>% paste0(collapse = " ")
+        first_line <- page %>% filter(y < y_coord_first + 3) %>%
+            stabilize_rows() %>%
+            arrange(x)
+
+        start_province_block <- first_line %>% filter(text == "Province") %>% pull(x)
+
+        option_line <- first_line %>% filter(x < start_province_block - 10) %>% pull(text) %>% paste0(collapse = " ")
+        province_line <-first_line %>% filter(x >= start_province_block - 10) %>% pull(text) %>% paste0(collapse = " ")
 
         last_line <- page %>% filter(y == y_coord_last) %>% pull(text)
 
@@ -66,7 +72,7 @@ extract_results <- function(pdf_pages) {
         code_option <- as.integer(res_option[[3]])
         province <- res_province[[2]]
         code_province <- as.integer(res_province[[3]])
-        year <- as.integer(last_line[[8]])
+        year <- last_line %>% paste0(collapse = " ") %>% str_match("(\\d+)\\s+http://") %>% .[,2] %>% as.integer
 
         page <- page %>% filter(!y %in% c(y_coord_first, y_coord_last))
 
@@ -93,10 +99,11 @@ extract_results <- function(pdf_pages) {
         # at the end of the document
         # It starts with something that is not a number, not "Code",
         # "Participant" or "Réussite"
+        # Some school start vy a number but they have Institute in the name
         start_school_block <- schools %>%
             group_by(y) %>%
             summarize(line = paste0(text, collapse = " ")) %>%
-            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)")) %>%
+            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, fixed("INSTITUT"))) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
@@ -159,7 +166,8 @@ extract_results <- function(pdf_pages) {
             # Add some tolerance
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F)\\s+((?:\\d)+)") %>%
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F|m|f)\\s+((?:\\d)+)") %>%
+            mutate(gender = str_to_upper(gender)) %>%
             type_convert(student_cols) %>%
             select(-y)
 
@@ -168,7 +176,7 @@ extract_results <- function(pdf_pages) {
             mutate(option = option, code_option = code_option,
                    province = province, code_province = code_province,
                    year = year,
-                    page = page_num, .before = school_index)
+                  page = page_num, .before = school_index)
         page_infos[[page_num]] <- school_info %>% left_join(student_info)
     }
 
