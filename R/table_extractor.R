@@ -52,10 +52,10 @@ extract_results <- function(pdf_pages) {
         # Extract option, province, year
         # No need to extract page number as it alreaady corresponds to
         # the index in the pdf_pages list
-        y_coord_first <- page[1,]$y
+        y_coord_first <- page[1,]$y + 3
         y_coord_last <-page[nrow(page),]$y
 
-        first_line <- page %>% filter(y < y_coord_first + 3) %>%
+        first_line <- page %>% filter(y < y_coord_first) %>%
             stabilize_rows() %>%
             arrange(x)
 
@@ -74,7 +74,7 @@ extract_results <- function(pdf_pages) {
         code_province <- as.integer(res_province[[3]])
         year <- last_line %>% paste0(collapse = " ") %>% str_match("(\\d+)\\s+http://") %>% .[,2] %>% as.integer
 
-        page <- page %>% filter(!y %in% c(y_coord_first, y_coord_last))
+        page <- page %>% filter(y > y_coord_first + 2, y != y_coord_last)
 
         # Detect schools
 
@@ -182,11 +182,20 @@ extract_results <- function(pdf_pages) {
 
     bind_rows(page_infos) }
 
-
+#' Extract the exam information
+#'
+#' @param filename character vector. The filename (or path)
+#' @param pages NULL for the whole pdf. A range for a part of the pdf
+#'
+#' @return  a tibble
+#'
 #' @export
-extract_from_file <- function(filename) {
+extract_from_file <- function(filename, pages=NULL) {
     # A list of tibbles, one per page
     pdf_pages <- pdftools::pdf_data(filename)
+    if(!is.null(pages)) {
+        pdf_pages <- pdf_pages[pages]
+    }
     extract_results(pdf_pages)
 }
 
