@@ -156,6 +156,7 @@ extract_results <- function(pdf_pages) {
             }
         }
 
+
         end_block <- school_info %>% select(school_index, end_block_y)
 
         # Extract student information
