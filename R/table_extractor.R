@@ -103,7 +103,7 @@ extract_results <- function(pdf_pages) {
         start_school_block <- schools %>%
             group_by(y) %>%
             summarize(line = paste0(text, collapse = " ")) %>%
-            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, fixed("INSTITUT"))) %>%
+            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, "INSTITUT|I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.")) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
@@ -167,7 +167,8 @@ extract_results <- function(pdf_pages) {
             # Add some tolerance
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F|m|f)\\s+((?:\\d)+)") %>%
+            # Gender is sometimes omitted
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F|m|f)?\\s+((?:\\d)+)") %>%
             mutate(gender = str_to_upper(gender)) %>%
             type_convert(student_cols) %>%
             select(-y)
