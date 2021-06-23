@@ -208,8 +208,9 @@ extract_from_folder <- function(foldername, destdir =".") {
     # we might want to parallelize that
     for(file in files) {
         res <- extract_from_file(file)
+        year <- pull(res[1,], year)
         if(nrow(res) > 0) {
-            readr::write_csv(res, paste0(destdir, "/", str_replace(file, "\\.pdf$", ".csv")))
+            readr::write_csv(res, paste0(destdir, "/", str_replace(file, "\\.pdf$", paste0("-", year, ".csv"))))
         }
     }
 }
