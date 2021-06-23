@@ -202,14 +202,14 @@ extract_from_file <- function(filename, pages=NULL) {
 }
 
 #' @export
-extract_from_folder <- function(foldername) {
+extract_from_folder <- function(foldername, destdir =".") {
     files <- list.files(foldername, pattern = ".*\\.pdf", recursive = TRUE, full.names = TRUE)
 
     # we might want to parallelize that
     for(file in files) {
         res <- extract_from_file(file)
         if(nrow(res) > 0) {
-            readr::write_csv(res, str_replace(file, "\\.pdf$", ".csv"))
+            readr::write_csv(res, paste0(destdir, "/", str_replace(file, "\\.pdf$", ".csv")))
         }
     }
 }
