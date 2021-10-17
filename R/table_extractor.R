@@ -203,14 +203,19 @@ extract_from_file <- function(filename, pages=NULL) {
 
 #' @export
 extract_from_folder <- function(foldername, destdir =".") {
+    if(!dir.exists(destdir)) {
+        error("Destination directory does not exist or you do not have rights to write in it. Check the spelling for it: ", destdir)
+    }
+
     files <- list.files(foldername, pattern = ".*\\.pdf", recursive = TRUE, full.names = TRUE)
+
 
     # we might want to parallelize that
     for(file in files) {
         res <- extract_from_file(file)
         year <- pull(res[1,], year)
         if(nrow(res) > 0) {
-            readr::write_csv(res, paste0(destdir, "/", str_replace(file, "\\.pdf$", paste0("-", year, ".csv"))))
+            readr::write_csv(res, paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv"))))
         }
     }
 }
