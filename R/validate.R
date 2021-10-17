@@ -22,5 +22,7 @@ validate <- function(extracted) {
         verify(school_female_witness) %>%
         verify(school_success_witness) %>%
         select(-school_female_witness, -school_success_witness) %>%
-        ungroup()
+        ungroup() %>%
+        verify(year == first(year)) %>%
+        assert(within_bounds(0, 100), mark)
 }
