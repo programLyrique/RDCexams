@@ -3,6 +3,7 @@
 export(extract_from_file)
 export(extract_from_folder)
 export(extract_results)
+import(assertr)
 import(dplyr)
 import(lubridate)
 import(readr)

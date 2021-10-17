@@ -99,7 +99,7 @@ extract_results <- function(pdf_pages) {
         # at the end of the document
         # It starts with something that is not a number, not "Code",
         # "Participant" or "Réussite"
-        # Some school start vy a number but they have Institute in the name
+        # Some school start with a number but they have Institute in the name
         start_school_block <- schools %>%
             group_by(y) %>%
             summarize(line = paste0(text, collapse = " ")) %>%
