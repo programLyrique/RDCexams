@@ -11,6 +11,8 @@ validate <- function(extracted) {
         verify(page - lag(page, default = 0) <= 1) %>% # There are no gaps in the pages
         # If they have a name, they also have a gender and a mark
         verify(if_else(not_na(name), not_na(gender) & not_na(mark), TRUE)) %>%
+        # if there are at leats one success, then no names should be NA
+        verify(nb_success == 0 | !is.na(name)) %>%
         # every school has a school code (and there are no province without school)
         verify(not_na(school) & not_na(code_school)) %>%
         # There are as many successful female participants as the lines with
