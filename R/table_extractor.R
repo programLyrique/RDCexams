@@ -153,6 +153,15 @@ extract_results <- function(pdf_pages) {
                     select(contains("school"), starts_with("nb")) %>%
                     mutate(school_index = 0, end_block_y = schools[1,]$y - 15)
                 school_info <- bind_rows(prev_school_info, school_info)
+
+                # correct the previous page information
+                page_infos[[page_num - 1]] <- page_infos[[page_num - 1]] %>%
+                    # if the last school on the page states there are participants, but
+                    # they are no one here, it means there is a continuation with the student name
+                    # later on. So remove that line with the NA.
+                    filter(!(school_index == max(school_index) & nb_success > 0 & is.na(name)))
+                    # We need to remove it here and not while parsing the page, otherwise,
+                    # the continuation is not detected properly for the next page.
             }
         }
 
@@ -180,9 +189,10 @@ extract_results <- function(pdf_pages) {
                    year = year,
                   page = page_num, .before = school_index)
         page_infos[[page_num]] <- school_info %>% left_join(student_info)
-    }
+        }
 
-    bind_rows(page_infos) }
+    bind_rows(page_infos)
+}
 
 #' Extract the exam information
 #'
