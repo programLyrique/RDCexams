@@ -130,9 +130,10 @@ extract_results <- function(pdf_pages) {
                 # we assume that there is at least one participant
                 nb_participants = as.integer(str_match(cur_data()[3, "text"], "Participants? : ((?:\\d)+)")[2]),
                 # Slightly trickier because they write "Zéro" instead of "0"!
+                # Sometimes, there is no gender in the data. So we just keep NA there
                 nb_females = replace_na(str_match(cur_data()[3, "text"], "Dont : ((?:\\d)+|Zéro) F")[2], "0"),
                 nb_success = replace_na(str_match(cur_data()[4, "text"], "Réussites?\\s+:\\s*((?:\\d)+|Zéro)")[2], "0"),
-                nb_success_females = replace_na(str_match(cur_data()[4, "text"], "Dont : ((?:\\d)+|Zéro) F")[2], "0"),
+                nb_success_females = str_match(cur_data()[4, "text"], "Dont : ((?:\\d)+|Zéro) F")[2],
                 end_block_y = max(y)
                 ) %>%
             # replace by a map on the columns?
@@ -177,7 +178,7 @@ extract_results <- function(pdf_pages) {
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
             # Gender is sometimes omitted
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F|m|f)?\\s+((?:\\d)+)") %>%
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*?)\\s+(?:(M|F|m|f)\\s+)?((?:\\d)+)") %>%
             mutate(gender = str_to_upper(gender)) %>%
             type_convert(student_cols) %>%
             select(-y)

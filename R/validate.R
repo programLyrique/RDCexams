@@ -9,8 +9,10 @@ validate <- function(extracted) {
                              "nb_participants", "nb_females", "nb_success", "nb_success_females",
                              "ranking", "name", "gender", "mark")) %>%
         verify(page - lag(page, default = 0) <= 1) %>% # There are no gaps in the pages
-        # If they have a name, they also have a gender and a mark
-        verify(if_else(not_na(name), not_na(gender) & not_na(mark), TRUE)) %>%
+        # If they have a name, they also have a mark
+        verify(if_else(not_na(name), not_na(mark), TRUE)) %>%
+        #if female student number is NA, there are successful participants, then all genders are NA
+        verify(if_else(is.na(nb_females) & nb_success > 0, is.na(gender), TRUE)) %>%
         # if there are at leats one success, then no names should be NA
         verify(nb_success == 0 | !is.na(name)) %>%
         # every school has a school code (and there are no province without school)
