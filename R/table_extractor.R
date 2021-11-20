@@ -139,7 +139,7 @@ extract_results <- function(pdf_pages) {
             # replace by a map on the columns?
             mutate(nb_females = if_else(nb_females == "Zéro", 0L, as.integer(nb_females)),
                    nb_success = if_else(nb_success == "Zéro", 0L, as.integer(nb_success)),
-                   nb_success_females = if_else(nb_success_females == "Zéro", 0L, as.integer(nb_success_females)))
+                   nb_success_females = if_else(nb_success_females == "Zéro" | nb_females == 0, 0L, as.integer(nb_success_females)))
 
 
         # Is there any continuation of a school on the previous page?
@@ -173,7 +173,7 @@ extract_results <- function(pdf_pages) {
         # The remaining lines
         student_info <- schools %>%
             group_by(school_index, y) %>%
-            left_join(end_block) %>%
+            left_join(end_block, by = "school_index") %>%
             # Add some tolerance
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
@@ -189,10 +189,18 @@ extract_results <- function(pdf_pages) {
                    province = province, code_province = code_province,
                    year = year,
                   page = page_num, .before = school_index)
-        page_infos[[page_num]] <- school_info %>% left_join(student_info)
+        page_infos[[page_num]] <- school_info %>% left_join(student_info, by = "school_index")
         }
 
-    bind_rows(page_infos)
+    bind_rows(page_infos) %>%
+    # Correct the number of female successes if it is NA but the number of female
+    # participants is not NA
+    group_by(school, code_school) %>%
+    mutate(nb_success_females =
+               if_else(is.na(nb_success_females) & !is.na(nb_females),
+                       sum(gender == "F"),
+                       nb_success_females)) %>%
+    ungroup()
 }
 
 #' Extract the exam information

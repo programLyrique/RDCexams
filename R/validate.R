@@ -17,6 +17,8 @@ validate <- function(extracted) {
         verify(nb_success == 0 | !is.na(name)) %>%
         # every school has a school code (and there are no province without school)
         verify(not_na(school) & not_na(code_school)) %>%
+        # there are no more successful female students than there are females
+        verify(if_else(not_na(nb_females) & not_na(nb_success_females), nb_females >= nb_success_females, TRUE)) %>%
         # There are as many successful female participants as the lines with
         # gender "F"
         # Same for the overall number of participants
