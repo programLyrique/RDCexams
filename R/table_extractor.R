@@ -178,7 +178,7 @@ extract_results <- function(pdf_pages) {
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
             # Gender is sometimes omitted
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*?)\\s+(?:(M|F|m|f)\\s+)?((?:\\d)+)") %>%
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*?)\\s+(?:(M|F|m|f)\\s+)?((?:\\d)+)$") %>%
             mutate(gender = str_to_upper(gender)) %>%
             type_convert(student_cols) %>%
             select(-y)
