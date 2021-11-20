@@ -45,15 +45,16 @@ extract_results <- function(pdf_pages) {
 
     page_infos <- list()
 
+
     for(page_num in seq_along(pdf_pages)) {
         # sort rows by increasing y (they are not!)
         page <- arrange(pdf_pages[[page_num]], y)
 
         # Extract option, province, year
-        # No need to extract page number as it alreaady corresponds to
+        # No need to extract page number as it already corresponds to
         # the index in the pdf_pages list
         y_coord_first <- page[1,]$y + 3
-        y_coord_last <-page[nrow(page),]$y
+        y_coord_last <-page[nrow(page),]$y - 3
 
         first_line <- page %>% filter(y < y_coord_first) %>%
             stabilize_rows() %>%
@@ -64,7 +65,8 @@ extract_results <- function(pdf_pages) {
         option_line <- first_line %>% filter(x < start_province_block - 10) %>% pull(text) %>% paste0(collapse = " ")
         province_line <-first_line %>% filter(x >= start_province_block - 10) %>% pull(text) %>% paste0(collapse = " ")
 
-        last_line <- page %>% filter(y == y_coord_last) %>% pull(text)
+        last_line <- page %>% filter(y > y_coord_last) %>%
+            stabilize_rows() %>% arrange(x) %>% pull(text)
 
         res_option <- str_match(option_line, "Option\\s+:\\s+(.*)\\s+-\\s+Code\\s+:\\s+(\\d+)")
         res_province <- str_match(province_line, "Province\\s+:\\s+(.*)\\s+-\\s+Code\\s+:\\s+(\\d+)")
@@ -74,7 +76,7 @@ extract_results <- function(pdf_pages) {
         code_province <- as.integer(res_province[[3]])
         year <- last_line %>% paste0(collapse = " ") %>% str_match("(\\d+)\\s+http://") %>% .[,2] %>% as.integer
 
-        page <- page %>% filter(y > y_coord_first + 2, y != y_coord_last)
+        page <- page %>% filter(y > y_coord_first + 2, y < y_coord_last - 2)
 
         # Detect schools
 
