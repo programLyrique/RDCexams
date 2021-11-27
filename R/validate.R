@@ -22,8 +22,8 @@ validate <- function(extracted) {
         # There are as many successful female participants as the lines with
         # gender "F"
         # Same for the overall number of participants
-        group_by(school, code_school) %>% # assertr does not do grouped assertion :()
-        mutate(school_female_witness = nb_success == 0 | sum(gender == "F") == first(nb_success_females)) %>%
+        group_by(province, school, code_school) %>% # assertr does not do grouped assertion :()
+        mutate(school_female_witness = nb_success == 0 | sum(gender == "F", na.rm =  TRUE) == first(nb_success_females)) %>%
         mutate(school_success_witness = nb_success == 0 | n() == first(nb_success)) %>%
         verify(school_female_witness) %>%
         verify(school_success_witness) %>%
@@ -31,4 +31,29 @@ validate <- function(extracted) {
         ungroup() %>%
         verify(year == first(year)) %>%
         assert(within_bounds(0, 100), mark)
+}
+
+
+validate_file <- function(filename) {
+    csv <- read_csv(filename)
+
+    res <- tryCatch(validate(csv),
+        error = function(e) conditionMessage(e))
+
+    if(is.character(res)) {
+        return(res)
+    } else {
+        return(NA_character_)
+    }
+}
+
+validate_folder <- function(foldername) {
+    if(!dir.exists(foldername)) {
+        stop("Directory does not exist or you do not have rights to read in it. Check the spelling for it: ", foldername)
+    }
+    files <-  list.files(foldername, pattern = ".*\\.csv", recursive = TRUE, full.names = TRUE)
+
+    report <- tibble(file = files)
+
+    report %>% mutate(error = purrr::map_chr(file, validate_file))
 }
