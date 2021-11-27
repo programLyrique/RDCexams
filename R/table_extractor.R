@@ -78,6 +78,15 @@ extract_results <- function(pdf_pages) {
 
         page <- page %>% filter(y > y_coord_first + 2, y < y_coord_last - 2)
 
+        if(nrow(page) == 0) {
+            # the page is empty
+            # See Kinshasa Est 2016
+
+            # we do not insert a row here (but we could...)
+            # it will make one of the assertion in validate fail...
+            next
+        }
+
         # Detect schools
 
         # First we separate columns
@@ -102,10 +111,12 @@ extract_results <- function(pdf_pages) {
         # It starts with something that is not a number, not "Code",
         # "Participant" or "Réussite"
         # Some school start with a number but they have Institute in the name
+        # ( or College, or...)
+        # ex: 14 OCTOBRE INST.
         start_school_block <- schools %>%
             group_by(y) %>%
             summarize(line = paste0(text, collapse = " ")) %>%
-            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, "INSTITUT|I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.")) %>%
+            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, regex("INSTITUT|COLLEGE|I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.|INST\\.|ITA$|C\\.S\\.", ignore_case =  TRUE))) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
@@ -197,7 +208,7 @@ extract_results <- function(pdf_pages) {
     bind_rows(page_infos) %>%
     # Correct the number of female successes if it is NA but the number of female
     # participants is not NA
-    group_by(school, code_school) %>%
+    group_by(province, school, code_school) %>%
     mutate(nb_success_females =
                if_else(is.na(nb_success_females) & !is.na(nb_females),
                        sum(gender == "F"),
@@ -223,9 +234,9 @@ extract_from_file <- function(filename, pages=NULL) {
 }
 
 #' @export
-extract_from_folder <- function(foldername, destdir =".") {
+extract_from_folder <- function(foldername, destdir =".", only_missing=FALSE) {
     if(!dir.exists(destdir)) {
-        error("Destination directory does not exist or you do not have rights to write in it. Check the spelling for it: ", destdir)
+        stop("Destination directory does not exist or you do not have rights to write in it. Check the spelling for it: ", destdir)
     }
 
     files <- list.files(foldername, pattern = ".*\\.pdf", recursive = TRUE, full.names = TRUE)
@@ -233,6 +244,14 @@ extract_from_folder <- function(foldername, destdir =".") {
 
     # we might want to parallelize that
     for(file in files) {
+        if(only_missing) {
+            year <- basename(dirname(file))
+            filename <- paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv")))
+            if(file.exists(filename)) {
+                next
+            }
+        }
+        cat("Extracting", file, "\n")
         res <- extract_from_file(file)
         year <- pull(res[1,], year)
         if(nrow(res) > 0) {
