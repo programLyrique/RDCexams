@@ -116,7 +116,7 @@ extract_results <- function(pdf_pages) {
         start_school_block <- schools %>%
             group_by(y) %>%
             summarize(line = paste0(text, collapse = " ")) %>%
-            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, regex("INSTITUT|COLLEGE|I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.|INST\\.|ITA$|C\\.S\\.", ignore_case =  TRUE))) %>%
+            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, regex("INSTITUT|COLLEGE|I\\.T\\.A\\.$|^I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.|INST\\.|ITA$|C\\.S\\.", ignore_case =  TRUE))) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
