@@ -116,7 +116,7 @@ extract_results <- function(pdf_pages, correct = FALSE) {
         start_school_block <- schools %>%
             group_by(y) %>%
             summarize(line = paste0(text, collapse = " ")) %>%
-            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, regex("INSTITUT|COLLEGE|I\\.T\\.A\\.$|^I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.|INST\\.|ITA$|C\\.S\\.", ignore_case =  TRUE))) %>%
+            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, regex("INSTITUT|COLLEGE|I\\.T\\.A\\.$|^I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.|INST\\.|ITA$|C\\.S\\.| ITS$| G\\.S\\.$", ignore_case =  TRUE))) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
@@ -205,29 +205,28 @@ extract_results <- function(pdf_pages, correct = FALSE) {
         page_infos[[page_num]] <- school_info %>% left_join(student_info, by = "school_index")
         }
 
-    res <- bind_rows(page_infos)
-
-    if(correct) {
-     res%>%
+    res <- bind_rows(page_infos) %>%
         group_by(province, school, code_school) %>%
-        # Remove duplicated students
-        group_modify(~ distinct(.x, name, gender, mark, .keep_all = TRUE)) %>%
         # Correct the number of female successes if it is NA but the number of female
         # participants is not NA
         mutate(nb_success_females =
                    if_else(is.na(nb_success_females) & !is.na(nb_females),
                            sum(gender == "F"),
                            nb_success_females)) %>%
-        mutate(nb_success_females_problem = nb_success == 0 |
-                   sum(gender == "F", na.rm =  TRUE) == first(nb_success_females)) %>%
+        mutate(female_success_discrepancy = nb_success!= 0 & sum(gender == "F", na.rm =  TRUE) != first(nb_success_females))
+
+
+    if(correct) {
+     res%>%
+        # Remove duplicated students
+        group_modify(~ distinct(.x, name, gender, mark, .keep_all = TRUE)) %>%
         ungroup()
     }
     else {
         # Add some columns to warn about possible errors
-        res %>% group_by(province, school, code_school) %>%
-            mutate(duplicated_students = nb_participants == 0 | n() != n_distinct(name, gender, mark)) %>%
-            mutate(female_success_discrepancy = nb_success == 0 | sum(gender == "F", na.rm =  TRUE) == first(nb_success_females))
-
+        res %>%
+            mutate(duplicated_students = nb_participants !=0 & n() != n_distinct(name, gender, mark)) %>%
+            ungroup()
     }
 }
 
@@ -239,17 +238,17 @@ extract_results <- function(pdf_pages, correct = FALSE) {
 #' @return  a tibble
 #'
 #' @export
-extract_from_file <- function(filename, pages=NULL) {
+extract_from_file <- function(filename, pages=NULL, correct = FALSE) {
     # A list of tibbles, one per page
     pdf_pages <- pdftools::pdf_data(filename)
     if(!is.null(pages)) {
         pdf_pages <- pdf_pages[pages]
     }
-    extract_results(pdf_pages)
+    extract_results(pdf_pages, correct = correct)
 }
 
 #' @export
-extract_from_folder <- function(foldername, destdir =".", only_missing=FALSE) {
+extract_from_folder <- function(foldername, destdir =".", only_missing=FALSE, correct = FALSE) {
     if(!dir.exists(destdir)) {
         stop("Destination directory does not exist or you do not have rights to write in it. Check the spelling for it: ", destdir)
     }
@@ -267,7 +266,7 @@ extract_from_folder <- function(foldername, destdir =".", only_missing=FALSE) {
             }
         }
         cat("Extracting", file, "\n")
-        res <- extract_from_file(file)
+        res <- extract_from_file(file, correct = correct)
         year <- pull(res[1,], year)
         if(nrow(res) > 0) {
             readr::write_csv(res, paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv"))))
