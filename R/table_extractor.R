@@ -14,7 +14,7 @@ stabilize_rows <- function(df, tolerance = 2, n = 3) {
 
 #' @export
 #' @import dplyr tidyr stringr lubridate readr
-extract_results <- function(pdf_pages) {
+extract_results <- function(pdf_pages, correct = FALSE) {
     # For documentation purposes
     # results <- tibble(
     #     option = character(0),
@@ -205,15 +205,26 @@ extract_results <- function(pdf_pages) {
         page_infos[[page_num]] <- school_info %>% left_join(student_info, by = "school_index")
         }
 
-    bind_rows(page_infos) %>%
-    # Correct the number of female successes if it is NA but the number of female
-    # participants is not NA
-    group_by(province, school, code_school) %>%
-    mutate(nb_success_females =
-               if_else(is.na(nb_success_females) & !is.na(nb_females),
-                       sum(gender == "F"),
-                       nb_success_females)) %>%
-    ungroup()
+    res <- bind_rows(page_infos)
+
+    if(correct) {
+     res%>%
+        group_by(province, school, code_school) %>%
+        # Remove duplicated students
+        group_modify(~ distinct(.x, name, gender, mark, .keep_all = TRUE)) %>%
+        # Correct the number of female successes if it is NA but the number of female
+        # participants is not NA
+        mutate(nb_success_females =
+                   if_else(is.na(nb_success_females) & !is.na(nb_females),
+                           sum(gender == "F"),
+                           nb_success_females)) %>%
+        mutate(nb_success_females_problem = nb_success == 0 |
+                   sum(gender == "F", na.rm =  TRUE) == first(nb_success_females)) %>%
+        ungroup()
+    }
+    else {
+        res
+    }
 }
 
 #' Extract the exam information

@@ -8,7 +8,7 @@ validate <- function(extracted) {
                              "year", "page", "school_index", "school", "code_school",
                              "nb_participants", "nb_females", "nb_success", "nb_success_females",
                              "ranking", "name", "gender", "mark")) %>%
-        verify(page - lag(page, default = 0) <= 1) %>% # There are no gaps in the pages
+        #verify(page - lag(page, default = 0) <= 1) %>% # There are no gaps in the pages
         # If they have a name, they also have a mark
         verify(if_else(not_na(name), not_na(mark), TRUE)) %>%
         #if female student number is NA, there are successful participants, then all genders are NA
@@ -21,10 +21,13 @@ validate <- function(extracted) {
         verify(if_else(not_na(nb_females) & not_na(nb_success_females), nb_females >= nb_success_females, TRUE)) %>%
         # There are as many successful female participants as the lines with
         # gender "F"
-        # Same for the overall number of participants
+        # Same for the overall number of successes
+        # There are sometimes duplicated students also
         group_by(province, school, code_school) %>% # assertr does not do grouped assertion :()
+        mutate(unique_students = n_distinct(name, gender, mark), n_displayed = n()) %>%
         mutate(school_female_witness = nb_success == 0 | sum(gender == "F", na.rm =  TRUE) == first(nb_success_females)) %>%
         mutate(school_success_witness = nb_success == 0 | n() == first(nb_success)) %>%
+        verify(nb_participants == 0 | unique_students == n_displayed) %>%
         verify(school_female_witness) %>%
         verify(school_success_witness) %>%
         select(-school_female_witness, -school_success_witness) %>%
