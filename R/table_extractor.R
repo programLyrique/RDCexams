@@ -223,7 +223,11 @@ extract_results <- function(pdf_pages, correct = FALSE) {
         ungroup()
     }
     else {
-        res
+        # Add some columns to warn about possible errors
+        res %>% group_by(province, school, code_school) %>%
+            mutate(duplicated_students = nb_participants == 0 | n() != n_distinct(name, gender, mark)) %>%
+            mutate(female_success_discrepancy = nb_success == 0 | sum(gender == "F", na.rm =  TRUE) == first(nb_success_females))
+
     }
 }
 

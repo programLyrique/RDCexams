@@ -30,7 +30,7 @@ validate <- function(extracted) {
         verify(nb_participants == 0 | unique_students == n_displayed) %>%
         verify(school_female_witness) %>%
         verify(school_success_witness) %>%
-        select(-school_female_witness, -school_success_witness) %>%
+        select(-school_female_witness, -school_success_witness, -unique_students, -unique_displayed) %>%
         ungroup() %>%
         verify(year == first(year)) %>%
         assert(within_bounds(0, 100), mark)
