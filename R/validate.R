@@ -28,8 +28,8 @@ validate <- function(extracted) {
         mutate(school_female_witness = nb_success == 0 | sum(gender == "F", na.rm =  TRUE) == first(nb_success_females)) %>%
         mutate(school_success_witness = nb_success == 0 | n() == first(nb_success)) %>%
         verify(nb_participants == 0 | unique_students == n_displayed) %>%
-        verify(school_female_witness) %>%
         verify(school_success_witness) %>%
+        verify(school_female_witness) %>%
         select(-school_female_witness, -school_success_witness, -unique_students, -n_displayed) %>%
         ungroup() %>%
         verify(year == first(year)) %>%

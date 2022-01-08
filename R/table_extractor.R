@@ -45,6 +45,17 @@ extract_results <- function(pdf_pages, correct = FALSE) {
 
     page_infos <- list()
 
+    # compute scale factor in x
+    x_min_max <- range(pdf_pages[[1]]$x)
+    width_real <- x_min_max[[2]] - x_min_max[[1]]
+    x_min_usual <- 84
+    x_max_usual <- 553
+    width_usual <- x_max_usual - x_min_usual
+    x_scale <- width_real / width_usual
+
+    # column separations fore the usual ones
+    start_column2 <- x_min_max[[1]] + (221 - x_min_usual + 12) * x_scale # 228
+    start_column3 <- x_min_max[[1]] + (380 - x_min_usual + 12) * x_scale # 391
 
     for(page_num in seq_along(pdf_pages)) {
         # sort rows by increasing y (they are not!)
@@ -90,8 +101,8 @@ extract_results <- function(pdf_pages, correct = FALSE) {
         # Detect schools
 
         # First we separate columns
-        start_column2 <- 221 + 12 # 228
-        start_column3 <- 374 + 12 # 391
+        #start_column2 <- 221 + 12 # 228
+        #start_column3 <- 374 + 12 # 391
 
         column1 <- page %>% filter(x < start_column2)
         column2 <- page %>% filter(x > start_column2, x < start_column3)
@@ -213,7 +224,8 @@ extract_results <- function(pdf_pages, correct = FALSE) {
                    if_else(is.na(nb_success_females) & !is.na(nb_females),
                            sum(gender == "F"),
                            nb_success_females)) %>%
-        mutate(female_success_discrepancy = nb_success!= 0 & sum(gender == "F", na.rm =  TRUE) != first(nb_success_females))
+        mutate(female_success_discrepancy = nb_success!= 0 & sum(gender == "F", na.rm =  TRUE) != first(nb_success_females)) %>%
+        mutate(school_success_discrepancy = nb_success!= 0 & n() == first(nb_success))
 
 
     if(correct) {
@@ -240,10 +252,12 @@ extract_results <- function(pdf_pages, correct = FALSE) {
 #' @export
 extract_from_file <- function(filename, pages=NULL, correct = FALSE) {
     # A list of tibbles, one per page
+    message("Loading data from the pdf.\n")
     pdf_pages <- pdftools::pdf_data(filename)
     if(!is.null(pages)) {
         pdf_pages <- pdf_pages[pages]
     }
+    message("Extracting the data.\n")
     extract_results(pdf_pages, correct = correct)
 }
 
