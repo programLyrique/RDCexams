@@ -58,5 +58,5 @@ validate_folder <- function(foldername) {
 
     report <- tibble(file = files)
 
-    report %>% mutate(error = purrr::map_chr(file, validate_file))
+    report %>% mutate(error = furrr::future_map_chr(file, validate_file))
 }
