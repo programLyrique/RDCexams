@@ -22,7 +22,9 @@ Imports:
     lubridate,
     pdftools,
     tidyr,
-    assertr
+    assertr,
+    future,
+    furrr
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

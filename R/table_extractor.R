@@ -202,7 +202,7 @@ extract_results <- function(pdf_pages, correct = FALSE) {
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
             # Gender is sometimes omitted
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*?)\\s+(?:(M|F|m|f)\\s+)?((?:\\d)+)$") %>%
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)?\\s+(.*?)\\s+(?:(M|F|m|f)\\s+)?((?:\\d)+)$") %>%
             mutate(gender = str_to_upper(gender)) %>%
             type_convert(student_cols) %>%
             select(-y)
@@ -271,19 +271,27 @@ extract_from_folder <- function(foldername, destdir =".", only_missing=FALSE, co
 
 
     # we might want to parallelize that
-    for(file in files) {
+    furrr::future_map_chr(files,
+                          .options = furrr::furrr_options(packages = "RDCexams"),
+                          .progress = TRUE,
+                          function(file) {
         if(only_missing) {
             year <- basename(dirname(file))
             filename <- paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv")))
             if(file.exists(filename)) {
-                next
+                return(filename)
             }
         }
         cat("Extracting", file, "\n")
         res <- extract_from_file(file, correct = correct)
         year <- pull(res[1,], year)
         if(nrow(res) > 0) {
-            readr::write_csv(res, paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv"))))
+            dest_file <- paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv")))
+            readr::write_csv(res, dest_file)
+            dest_file
         }
-    }
+        else {
+            ""
+        }
+    })
 }
