@@ -119,19 +119,11 @@ extract_results <- function(pdf_pages, correct = FALSE) {
 
 
 
-        # TODO: compute the x difference of the min x of two consecutive lines
-        # if the difference is above some threshold, it means it is the end of
-        # school prefix, which if 4 lines, so we can go up 4 lines to find the
-        # school beginning
-        # We also control that the differenec is not two big. If it is,
-        # it is because it was a column change
-        threshold <- 5 * x_scale
+        # The school starts with their name in bold font (but not italic)
         start_school_block <- schools %>%
             group_by(y) %>%
-            summarize(x_min = min(x)) %>%
-            mutate(x_diff = x_min - lag(x_min, default = x_min[[1]] + 2 * threshold),
-                                        next_x_min = lead(x_diff, n = 4)) %>%
-            filter(next_x_min > threshold, next_x_min < 3 * threshold) %>%
+            summarize(font_name = first(font_name)) %>%
+            filter(str_detect(font_name, "Bold$")) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
