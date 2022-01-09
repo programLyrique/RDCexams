@@ -123,7 +123,7 @@ extract_results <- function(pdf_pages, correct = FALSE) {
         start_school_block <- schools %>%
             group_by(y) %>%
             summarize(font_name = first(font_name)) %>%
-            filter(str_detect(font_name, "Bold$")) %>%
+            filter(str_detect(font_name, "Bold$|\\+F1$")) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
@@ -221,7 +221,7 @@ extract_results <- function(pdf_pages, correct = FALSE) {
                            sum(gender == "F"),
                            nb_success_females)) %>%
         mutate(female_success_discrepancy = nb_success!= 0 & sum(gender == "F", na.rm =  TRUE) != first(nb_success_females)) %>%
-        mutate(school_success_discrepancy = nb_success!= 0 & n() == first(nb_success))
+        mutate(school_success_discrepancy = nb_success!= 0 & n() != first(nb_success))
 
 
     if(correct) {
@@ -266,7 +266,6 @@ extract_from_folder <- function(foldername, destdir =".", only_missing=FALSE, co
     files <- list.files(foldername, pattern = ".*\\.pdf", recursive = TRUE, full.names = TRUE)
 
 
-    # we might want to parallelize that
     furrr::future_map_chr(files,
                           .options = furrr::furrr_options(packages = "RDCexams"),
                           .progress = TRUE,
