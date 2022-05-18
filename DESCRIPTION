@@ -21,4 +21,10 @@ Imports:
     stringr,
     lubridate,
     pdftools,
-    tidyr
+    tidyr,
+    assertr,
+    future,
+    furrr
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

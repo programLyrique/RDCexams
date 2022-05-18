@@ -14,7 +14,7 @@ stabilize_rows <- function(df, tolerance = 2, n = 3) {
 
 #' @export
 #' @import dplyr tidyr stringr lubridate readr
-extract_results <- function(pdf_pages) {
+extract_results <- function(pdf_pages, correct = FALSE) {
     # For documentation purposes
     # results <- tibble(
     #     option = character(0),
@@ -45,15 +45,27 @@ extract_results <- function(pdf_pages) {
 
     page_infos <- list()
 
+    # compute scale factor in x
+    x_min_max <- range(pdf_pages[[1]]$x)
+    width_real <- x_min_max[[2]] - x_min_max[[1]]
+    x_min_usual <- 84
+    x_max_usual <- 553
+    width_usual <- x_max_usual - x_min_usual
+    x_scale <- width_real / width_usual
+
+    # column separations fore the usual ones
+    start_column2 <- x_min_max[[1]] + (221 - x_min_usual + 12) * x_scale # 228
+    start_column3 <- x_min_max[[1]] + (380 - x_min_usual + 12) * x_scale # 391
+
     for(page_num in seq_along(pdf_pages)) {
         # sort rows by increasing y (they are not!)
         page <- arrange(pdf_pages[[page_num]], y)
 
         # Extract option, province, year
-        # No need to extract page number as it alreaady corresponds to
+        # No need to extract page number as it already corresponds to
         # the index in the pdf_pages list
         y_coord_first <- page[1,]$y + 3
-        y_coord_last <-page[nrow(page),]$y
+        y_coord_last <-page[nrow(page),]$y - 3
 
         first_line <- page %>% filter(y < y_coord_first) %>%
             stabilize_rows() %>%
@@ -64,7 +76,8 @@ extract_results <- function(pdf_pages) {
         option_line <- first_line %>% filter(x < start_province_block - 10) %>% pull(text) %>% paste0(collapse = " ")
         province_line <-first_line %>% filter(x >= start_province_block - 10) %>% pull(text) %>% paste0(collapse = " ")
 
-        last_line <- page %>% filter(y == y_coord_last) %>% pull(text)
+        last_line <- page %>% filter(y > y_coord_last) %>%
+            stabilize_rows() %>% arrange(x) %>% pull(text)
 
         res_option <- str_match(option_line, "Option\\s+:\\s+(.*)\\s+-\\s+Code\\s+:\\s+(\\d+)")
         res_province <- str_match(province_line, "Province\\s+:\\s+(.*)\\s+-\\s+Code\\s+:\\s+(\\d+)")
@@ -74,13 +87,22 @@ extract_results <- function(pdf_pages) {
         code_province <- as.integer(res_province[[3]])
         year <- last_line %>% paste0(collapse = " ") %>% str_match("(\\d+)\\s+http://") %>% .[,2] %>% as.integer
 
-        page <- page %>% filter(y > y_coord_first + 2, y != y_coord_last)
+        page <- page %>% filter(y > y_coord_first + 2, y < y_coord_last - 2)
+
+        if(nrow(page) == 0) {
+            # the page is empty
+            # See Kinshasa Est 2016
+
+            # we do not insert a row here (but we could...)
+            # it will make one of the assertion in validate fail...
+            next
+        }
 
         # Detect schools
 
         # First we separate columns
-        start_column2 <- 221 + 12 # 228
-        start_column3 <- 374 + 12 # 391
+        #start_column2 <- 221 + 12 # 228
+        #start_column3 <- 374 + 12 # 391
 
         column1 <- page %>% filter(x < start_column2)
         column2 <- page %>% filter(x > start_column2, x < start_column3)
@@ -95,15 +117,13 @@ extract_results <- function(pdf_pages) {
             arrange(y, x) %>% # it was not always sorted by x also!!
             stabilize_rows() # correct subtle difference in y in rows
 
-        # A school block ends just before a new block start, or
-        # at the end of the document
-        # It starts with something that is not a number, not "Code",
-        # "Participant" or "Réussite"
-        # Some school start vy a number but they have Institute in the name
+
+
+        # The school starts with their name in bold font (but not italic)
         start_school_block <- schools %>%
             group_by(y) %>%
-            summarize(line = paste0(text, collapse = " ")) %>%
-            filter(!str_detect(line, "^((\\d)+|Code|Participant|Réussite)") | str_detect(line, "INSTITUT|I\\.T\\.A\\.|SCOLAIRE|I\\.T\\.C\\.")) %>%
+            summarize(font_name = first(font_name)) %>%
+            filter(str_detect(font_name, "Bold$|\\+F1$")) %>%
             select(y) %>%
             mutate(school_index = row_number())
 
@@ -130,15 +150,16 @@ extract_results <- function(pdf_pages) {
                 # we assume that there is at least one participant
                 nb_participants = as.integer(str_match(cur_data()[3, "text"], "Participants? : ((?:\\d)+)")[2]),
                 # Slightly trickier because they write "Zéro" instead of "0"!
+                # Sometimes, there is no gender in the data. So we just keep NA there
                 nb_females = replace_na(str_match(cur_data()[3, "text"], "Dont : ((?:\\d)+|Zéro) F")[2], "0"),
                 nb_success = replace_na(str_match(cur_data()[4, "text"], "Réussites?\\s+:\\s*((?:\\d)+|Zéro)")[2], "0"),
-                nb_success_females = replace_na(str_match(cur_data()[4, "text"], "Dont : ((?:\\d)+|Zéro) F")[2], "0"),
+                nb_success_females = str_match(cur_data()[4, "text"], "Dont : ((?:\\d)+|Zéro) F")[2],
                 end_block_y = max(y)
                 ) %>%
             # replace by a map on the columns?
-            mutate(nb_females = as.integer(if_else(nb_females == "Zéro", "0", nb_females)),
-                   nb_success = as.integer(if_else(nb_success == "Zéro", "0",nb_success)),
-                   nb_success_females = as.integer(if_else(nb_success_females == "Zéro", "0", nb_success_females)))
+            mutate(nb_females = if_else(nb_females == "Zéro", 0L, as.integer(nb_females)),
+                   nb_success = if_else(nb_success == "Zéro", 0L, as.integer(nb_success)),
+                   nb_success_females = if_else(nb_success_females == "Zéro" | nb_females == 0, 0L, as.integer(nb_success_females)))
 
 
         # Is there any continuation of a school on the previous page?
@@ -153,6 +174,15 @@ extract_results <- function(pdf_pages) {
                     select(contains("school"), starts_with("nb")) %>%
                     mutate(school_index = 0, end_block_y = schools[1,]$y - 15)
                 school_info <- bind_rows(prev_school_info, school_info)
+
+                # correct the previous page information
+                page_infos[[page_num - 1]] <- page_infos[[page_num - 1]] %>%
+                    # if the last school on the page states there are participants, but
+                    # they are no one here, it means there is a continuation with the student name
+                    # later on. So remove that line with the NA.
+                    filter(!(school_index == max(school_index) & nb_success > 0 & is.na(name)))
+                    # We need to remove it here and not while parsing the page, otherwise,
+                    # the continuation is not detected properly for the next page.
             }
         }
 
@@ -163,12 +193,12 @@ extract_results <- function(pdf_pages) {
         # The remaining lines
         student_info <- schools %>%
             group_by(school_index, y) %>%
-            left_join(end_block) %>%
+            left_join(end_block, by = "school_index") %>%
             # Add some tolerance
             filter(y > end_block_y + 5) %>%
             summarize(text = paste0(text, collapse = " ")) %>%
             # Gender is sometimes omitted
-            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)\\s+(.*)\\s+(M|F|m|f)?\\s+((?:\\d)+)") %>%
+            extract(text, c("ranking", "name", "gender", "mark"), regex = "((?:\\d)+)?\\s+(.*?)\\s+(?:(M|F|m|f)\\s+)?((?:\\d)+)$") %>%
             mutate(gender = str_to_upper(gender)) %>%
             type_convert(student_cols) %>%
             select(-y)
@@ -179,10 +209,34 @@ extract_results <- function(pdf_pages) {
                    province = province, code_province = code_province,
                    year = year,
                   page = page_num, .before = school_index)
-        page_infos[[page_num]] <- school_info %>% left_join(student_info)
-    }
+        page_infos[[page_num]] <- school_info %>% left_join(student_info, by = "school_index")
+        }
 
-    bind_rows(page_infos) }
+    res <- bind_rows(page_infos) %>%
+        group_by(province, school, code_school) %>%
+        # Correct the number of female successes if it is NA but the number of female
+        # participants is not NA
+        mutate(nb_success_females =
+                   if_else(is.na(nb_success_females) & !is.na(nb_females),
+                           sum(gender == "F"),
+                           nb_success_females)) %>%
+        mutate(female_success_discrepancy = nb_success!= 0 & sum(gender == "F", na.rm =  TRUE) != first(nb_success_females)) %>%
+        mutate(school_success_discrepancy = nb_success!= 0 & n() != first(nb_success))
+
+
+    if(correct) {
+     res%>%
+        # Remove duplicated students
+        group_modify(~ distinct(.x, name, gender, mark, .keep_all = TRUE)) %>%
+        ungroup()
+    }
+    else {
+        # Add some columns to warn about possible errors
+        res %>%
+            mutate(duplicated_students = nb_participants !=0 & n() != n_distinct(name, gender, mark)) %>%
+            ungroup()
+    }
+}
 
 #' Extract the exam information
 #'
@@ -192,30 +246,47 @@ extract_results <- function(pdf_pages) {
 #' @return  a tibble
 #'
 #' @export
-extract_from_file <- function(filename, pages=NULL) {
+extract_from_file <- function(filename, pages=NULL, correct = FALSE) {
     # A list of tibbles, one per page
-    pdf_pages <- pdftools::pdf_data(filename)
+    message("Loading data from the pdf.\n")
+    pdf_pages <- pdftools::pdf_data(filename, font_info = TRUE)
     if(!is.null(pages)) {
         pdf_pages <- pdf_pages[pages]
     }
-    extract_results(pdf_pages)
+    message("Extracting the data.\n")
+    extract_results(pdf_pages, correct = correct)
 }
 
 #' @export
-extract_from_folder <- function(foldername, destdir =".") {
+extract_from_folder <- function(foldername, destdir =".", only_missing=FALSE, correct = FALSE) {
     if(!dir.exists(destdir)) {
-        error("Destination directory does not exist or you do not have rights to write in it. Check the spelling for it: ", destdir)
+        stop("Destination directory does not exist or you do not have rights to write in it. Check the spelling for it: ", destdir)
     }
 
     files <- list.files(foldername, pattern = ".*\\.pdf", recursive = TRUE, full.names = TRUE)
 
 
-    # we might want to parallelize that
-    for(file in files) {
-        res <- extract_from_file(file)
+    furrr::future_map_chr(files,
+                          .options = furrr::furrr_options(packages = "RDCexams"),
+                          .progress = TRUE,
+                          function(file) {
+        if(only_missing) {
+            year <- basename(dirname(file))
+            filename <- paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv")))
+            if(file.exists(filename)) {
+                return(filename)
+            }
+        }
+        cat("Extracting", file, "\n")
+        res <- extract_from_file(file, correct = correct)
         year <- pull(res[1,], year)
         if(nrow(res) > 0) {
-            readr::write_csv(res, paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv"))))
+            dest_file <- paste0(destdir, "/", str_replace(basename(file), "\\.pdf$", paste0("-", year, ".csv")))
+            readr::write_csv(res, dest_file)
+            dest_file
         }
-    }
+        else {
+            ""
+        }
+    })
 }

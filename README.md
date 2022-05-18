@@ -27,7 +27,18 @@ tibble(
 Then, you can save the tibble as a CSV file for instance.
 
 
-You can also use `extract_from_folder` to process all the pdfs in a folder (and its sub-folders).
+You can also use `extract_from_folder` to process all the pdfs in a folder (and its sub-folders). This one requires `furrr` and can extract the files in parallel:
+
+```R
+library(furrr)
+
+plan(multisession, workers = parallel::detectCores() - 1)
+
+# To extract only years 2015 to 2021
+folders <- paste0("ExamenEtatDRC/", 2015:2021)
+
+RDCexams::extract_from_folder(folders, destdir = "ExamenEtatDRC/extracted/")
+```
 
 ## Installing
 
