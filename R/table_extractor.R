@@ -136,9 +136,9 @@ extract_results <- function(pdf_pages) {
                 end_block_y = max(y)
                 ) %>%
             # replace by a map on the columns?
-            mutate(nb_females = if_else(nb_females == "Zéro", 0L, as.integer(nb_females)),
-                   nb_success = if_else(nb_success == "Zéro", 0L, as.integer(nb_success)),
-                   nb_success_females = if_else(nb_success_females == "Zéro", 0L, as.integer(nb_success_females)))
+            mutate(nb_females = as.integer(if_else(nb_females == "Zéro", "0", nb_females)),
+                   nb_success = as.integer(if_else(nb_success == "Zéro", "0",nb_success)),
+                   nb_success_females = as.integer(if_else(nb_success_females == "Zéro", "0", nb_success_females)))
 
 
         # Is there any continuation of a school on the previous page?
