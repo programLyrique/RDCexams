@@ -38,6 +38,9 @@ find_school_type <- function(tokens) {
 }
 
 #' Normalization
+#' @param school character vector of the school name
+#' @export
+#' @return a normalized version of the school name
 normalize_schools <- function(school) {
     tokens <- tokens_from_school(school)
     school_type <- find_school_type(tokens)
