@@ -7,6 +7,7 @@ tokens_from_school <- function(school) {
 
 #' find the institute, school, keywords
 #' @param tokens character vector
+#' @import stringdist
 find_school_type <- function(tokens) {
     for(school_type in c("INSTITUT", "ECOLE", "ITA", "INST", "LYCEE", "COLLEGE", "COLL", "GROUPE", "SCOLAIRE")) {
         distances <- stringdist(tokens, school_type, method = "osa")
