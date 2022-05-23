@@ -14,7 +14,7 @@ LazyData: true
 URL: https://github.com/programLyrique/RDCexams
 BugReports: https://github.com/programLyrique/RDCexams/issues
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Imports:
     dplyr (>= 1.0.2),
     readr,
@@ -24,7 +24,8 @@ Imports:
     tidyr,
     assertr,
     future,
-    furrr
+    furrr,
+    stringdist
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
